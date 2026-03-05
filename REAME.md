@@ -13,6 +13,11 @@
 | **Network & IPAM** | ส่วนจัดการหมายเลข IP และการเชื่อมต่อสื่อสาร |
 | **Infrastructure** | ทรัพยากรพื้นฐาน (Host OS, Hardware, Cloud) |
 
+<==== vm ====><==== vm ====><==== vm ====>
+<===== Network =====><===== Network =====>
+<============  Docker Engine ============> 
+<===== Network =====><===== Network =====>
+<======== Network Infrastructure ========> 
 ---
 **สถาปัตยกรรมเครือข่ายภายใน:**
 1. **Network Infrastructure**: ระบบพื้นฐานด้าน Network
