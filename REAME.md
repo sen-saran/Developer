@@ -14,10 +14,15 @@
 | **Infrastructure** | ทรัพยากรพื้นฐาน (Host OS, Hardware, Cloud) |
 
 <==== vm ====><==== vm ====><==== vm ====>
+
 <===== Network =====><===== Network =====>
-<============  Docker Engine ============> 
+
+<============  Docker Engine ============>
+
 <===== Network =====><===== Network =====>
-<======== Network Infrastructure ========> 
+
+<======== Network Infrastructure ========>
+
 ---
 **สถาปัตยกรรมเครือข่ายภายใน:**
 1. **Network Infrastructure**: ระบบพื้นฐานด้าน Network
