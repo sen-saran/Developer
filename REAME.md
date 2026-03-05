@@ -15,13 +15,13 @@
 
 <==== vm ====><==== vm ====><==== vm ====>
 
-<===== Network =====><===== Network =====>
+<===== Network =====>  <===== Network =====>
 
 <============  DockerEngine ============>
 
 <===== Network =====><===== Network =====>
 
-<======== NetworkInfrastructure ========>
+<========== NetworkInfrastructure ==========>
 
 ---
 **สถาปัตยกรรมเครือข่ายภายใน:**
