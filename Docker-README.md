@@ -1,62 +1,63 @@
 # Docker for Developers 🚀
 
-
-    Created: สร้าง Container จาก Image แล้วแต่ยังไม่ได้สั่ง Run
-
-    Running: Container กำลังทำงาน (Primary Process กำลังทำงาน)
-
-    Paused: หยุดการทำงานชั่วคราว (Freeze สถานะไว้ใน Memory)
-
-    Stopped: หยุดการทำงาน (Process จบลง แต่ข้อมูลใน Container ยังอยู่)
-
-    Deleted: ลบ Container ออกจากระบบ
+คู่มือสรุปคำสั่ง Docker ที่จำเป็นสำหรับการพัฒนาซอฟต์แวร์ ตั้งแต่การจัดการ Container ไปจนถึงการทำ Orchestration เบื้องต้นด้วย Compose
 
 ---
 
 ## 1. Docker Lifecycle (วงจรชีวิต Container)
-การจัดการสถานะของ Container ตั้งแต่สร้างจนถึงลบทิ้ง
+การจัดการสถานะของ Container ตั้งแต่เริ่มต้นจนถึงการทำลายทิ้ง
 
+
+
+### สถานะที่สำคัญ:
+* **Created**: สร้าง Container จาก Image แล้วแต่ยังไม่ได้สั่ง Run
+* **Running**: Container กำลังทำงาน (Primary Process กำลังทำงาน)
+* **Paused**: หยุดการทำงานชั่วคราว (Freeze สถานะไว้ใน Memory)
+* **Stopped**: หยุดการทำงาน (Process จบลง แต่ข้อมูลใน Container ยังอยู่)
+* **Deleted**: ลบ Container ออกจากเครื่องอย่างถาวร
+
+### คำสั่งจัดการสถานะ (Container Management)
 ### คำสั่งจัดการ Container
 ```bash
-docker run -d --name my-app <image>  # สร้างและรัน Container ในพื้นหลัง (Background)
-docker ps                            # ดู Container ที่กำลังรันอยู่
-docker ps -a                         # ดู Container ทั้งหมด (รวมที่หยุดรันแล้ว)
-docker stop <container_id>           # สั่งหยุดการทำงาน
-docker start <container_id>          # สั่งให้กลับมาทำงานใหม่
-docker rm -f <container_id>          # ลบ Container ทิ้งทันที
+docker run -d --name my-app <image>  # สร้างและรัน Container ในพื้นหลัง (Detached Mode)
+docker ps                            # ดู Container ที่กำลังรันอยู่ (Running)
+docker ps -a                         # ดู Container ทั้งหมด (รวมที่หยุดรันหรือแค่สร้างไว้)
+docker stop <container_id>           # สั่งหยุดการทำงาน (Transition to Stopped)
+docker start <container_id>          # สั่งให้กลับมาทำงานใหม่ (Transition to Running)
+docker rm -f <container_id>          # ลบ Container ทิ้งทันที (Force Remove)
 ```
-
 ## 2. Docker Images (การจัดการภาพจำลอง)
-Image คือพิมพ์เขียว (Template) ที่ใช้สร้าง Container
+Image คือ "พิมพ์เขียว" (Template) ที่บรรจุ OS, Library และ Code ที่จำเป็นต้องใช้
 
-### คำสั่งจัดการ Container
+### คำสั่งจัดการ Image
 ```bash
-docker images                        # ดูรายการ Image ในเครื่อง
-docker pull <image_name>             # ดาวน์โหลด Image จาก Docker Hub
-docker rmi <image_id>                # ลบ Image ออกจากเครื่อง
-docker build -t my-image:v1 .        # สร้าง Image จาก Dockerfile ใน Folder ปัจจุบัน
+docker images                        # ดูรายการ Image ทั้งหมดที่มีในเครื่อง
+docker pull <image_name>             # ดาวน์โหลด Image จาก Docker Hub หรือ Registry
+docker rmi <image_id>                # ลบ Image ออกจากเครื่อง (Remove Image)
+docker build -t my-image:v1 .        # สร้าง Image ใหม่จาก Dockerfile ใน Folder ปัจจุบัน
 ```
 
 
-## 3. Docker Volumes & Networking (เบื้องต้น)
-ใช้สำหรับการเก็บข้อมูลถาวรและการเชื่อมต่อ
+## 3. Docker Volumes & Networking (การเก็บข้อมูลและการเชื่อมต่อ)
+ใช้สำหรับการจัดการข้อมูลให้คงอยู่ (Persist) และการเข้าถึงผ่าน Network
 
-### คำสั่งจัดการ Container
+### คำสั่งจัดการ Data & Port
 ```bash
-# การใช้ Volume เพื่อไม่ให้ข้อมูลหายเมื่อลบ Container
+# Volume: ผูก Folder เครื่องเราเข้ากับ Container เพื่อไม่ให้ข้อมูลหาย
 docker run -d -v my_data:/app/data <image>
 
-# การ Mapping Port (เครื่องเรา:ใน Container)
-docker run -d -p 8080:80 <image>
+# Port Mapping: (Port เครื่องเรา : Port ใน Container)
+docker run -d -p 8080:80 <image>     # เข้าใช้งานผ่าน localhost:8080
 ```
 
 
-## 4. Docker Compose (จัดการหลาย Container พร้อมกัน)
-เครื่องมือที่ใช้รันโปรเจกต์ที่มีหลาย Service (เช่น Web + Database)
+## 4. Docker Compose (การจัดการหลาย Container)
+เครื่องมือสำหรับรันระบบที่มีหลาย Service พร้อมกัน (เช่น Frontend + Backend + DB)
 
-### คำสั่งจัดการ Container
+### คำสั่งใช้งาน Docker Compose
 ```bash
-docker-compose up -d                 # สั่งรันทุก Service ตามที่เขียนในไฟล์ yaml
-docker-compose down                  # สั่งหยุดและลบ Container/Network ในโปรเจกต์
-docker-compose logs -f               # ดู Log ของทุก Service แบบ Real-time
+docker-compose up -d                 # สั่งรันทุก Service ตามที่เขียนในไฟล์ docker-compose.yml
+docker-compose down                  # สั่งหยุดและลบ Container, Network และ Image (บางส่วน)
+docker-compose logs -f               # ติดตาม Log ของทุก Service แบบ Real-time
+docker-compose exec <service> bash   # เข้าไปใช้งาน Terminal ภายใน Container ที่ระบุ
 ```
