@@ -47,6 +47,7 @@ docker run -p 8800:80 ngnix                    # foreground run host(os):8800 co
 docker run -d -p 9900:80 ngnix                 # background
 docker run --name mynginx -d -p 7700:80 nginx  # background เพื่อป้องกันการทำงานชนกัน
 ```
+
 #### 3. tester Container
 ### คำสั่งจัดการ Container
 ```bash
@@ -60,6 +61,8 @@ sudo apt install nano
 nano index.html
 http://localhost:7700
 ```
+
+
 #### 4. WORKSHOP WordPress + MySQL + phpMyAdmin
 ##### 4.1 เตรียมไฟล์ images ที่ต้องการใช้งาน
 - WordPress: `docker pull wordpress`
@@ -78,7 +81,14 @@ docker network ls
 # สร้าง network ชื่อ wordpress
 docker network create wordpress
 ```
-
+### คำสั่งจัดการ volume
+```bash
+docker volume ls
+docker volume create db_data
+docker container inspect wordpress
+# MySQL
+docker run --name mysql -e C:/Users/admin/Desktop/คู่มือ/Docker for Developer 2026/db_data:/var/lib/mysql-e MYSQL_ROOT_PASSWORD=1234 -e MYSQL_DATABASE=wordpress_db -e MYSQL_USER=wordpress -e MYSQL_PASSWORD=wordpress -d mysql:5.7
+```
 ##### 4.3 การรัน MySQL Container
 ```bash
 docker run --name mysql -e MYSQL_ROOT_PASSWORD=1234 -e MYSQL_DATABASE=wordpress_db -e MYSQL_USER=wordpress -e MYSQL_PASSWORD=wordpress -d mysql:5.7
@@ -141,20 +151,120 @@ docker run --name wordpress -p 7777:80 ^
 
 ---
 
-## สิ่งที่เรียนรู้ใน Day 2
+#### 5. Docker MERN Stack Application
+##### 5.1 Dockerfile คืออะไร?
+**Dockerfile** คือสคริปต์ที่รวบรวมคำสั่ง (Instructions) เพื่อใช้สร้าง **Docker Image** เปรียบเสมือนพิมพ์เขียวที่บอกว่า Container ต้องติดตั้งอะไรบ้างถึงจะทำงานได้
+---
+> การสร้างและรันแอปพลิเคชัน MERN Stack (MongoDB, Express, React, Node.js) ด้วย Docker
+---
+##### 5.2 ตารางคำสั่ง Dockerfile (Core Instructions)
 
-✅ พื้นฐานการใช้งาน Docker
-✅ การใช้งานคำสั่งพื้นฐานของ Docker
-✅ การสร้างและจัดการ Container
-
+| คำสั่ง | คำอธิบาย | ตัวอย่างการใช้งาน |
+| :--- | :--- | :--- |
+| **FROM** | ระบุ Image ตั้งต้นที่ใช้ (Base Image) | `FROM node:18-alpine` |
+| **WORKDIR** | กำหนดตำแหน่ง Folder เริ่มต้นภายใน Container | `WORKDIR /app` |
+| **COPY** | คัดลอกไฟล์จากเครื่อง Host เข้าไปใน Container | `COPY . .` |
+| **ADD** | คัดลอกไฟล์ (รองรับไฟล์บีบอัดและการดึงจาก URL) | `ADD data.tar.gz /app` |
+| **RUN** | สั่งทำงานคำสั่งในขั้นตอน Build (เช่นการลง Library) | `RUN npm install` |
+| **ENV** | กำหนดค่า Environment Variable | `ENV NODE_ENV=production` |
+| **EXPOSE** | กำหนด Port ที่ต้องการเปิดใช้งาน | `EXPOSE 3000` |
+| **CMD** | คำสั่งหลักที่จะรันเมื่อ Container เริ่มทำงาน | `CMD ["npm", "start"]` |
+| **ENTRYPOINT** | กำหนดคำสั่งหลักที่ตายตัวสำหรับ Container | `ENTRYPOINT ["node", "app.js"]` |
+---
+> **ข้อควรรู้:** `RUN` ทำงานตอน Build (สร้าง Image), ส่วน `CMD` ทำงานตอน Run (สร้าง Container)
 ---
 
-## หมายเหตุ
+### ตัวยอย่าง docker-compose.yml สำหรับ WordPress + MySQL + phpMyAdmin
+#### 1. การสร้าง Dockerfile และ Docker Image
+##### 1.1 สร้างโฟลเดอร์โปรเจ็กต์
+```bash
+# สร้างโฟลเดอร์โปรเจ็กต์
+mkdir docker-wordpress-app
+cd docker-wordpress-app
 
-- ใช้ Docker Desktop เวอร์ชั่นล่าสุด
-- ใช้ Git เวอร์ชั่นล่าสุด
-- ใช้ Visual Studio Code เวอร์ชั่นล่าสุด
-- ใช้ Git Bash (สำหรับ Windows) หรือ Terminal (สำหรับ Mac/Linux)
+# สร้างไฟล์ docker-compose.yml (ใช้คำสั่ง touch สำหรับ Mac/Linux หรือสร้างไฟล์ใหม่ใน VS Code)
+touch docker-compose.yml
+```
 
-## สรุป
-ขอให้สนุกกับการเรียนรู้ Basic Docker for Developer 2026 ครับ!
+```yaml
+networks:
+  wp_network:
+    name: wp_network
+    driver: bridge   
+
+services:
+  db:
+    image: mysql:5.7 # เสถียรสำหรับหลายระบบ
+    container_name: mysql_db
+    restart: always
+    networks:
+      - wp_network
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=wordpress_db
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress
+
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    container_name: wordpress_app
+    restart: always
+    networks:
+      - wp_network
+    volumes:
+      - ./wordpress_files:/var/www/html
+    ports:
+      - 8800:80
+    environment:
+      - WORDPRESS_DB_HOST=db:3306
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=wordpress
+      - WORDPRESS_DB_NAME=wordpress_db
+
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin:latest
+    container_name: phpmyadmin_tool
+    restart: always
+    networks:
+      - wp_network
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=db
+    ports:
+      - 7770:80
+
+volumes:
+  mysql_data:
+    name: mysql_data
+```
+---
+```bash
+# ตรวจสอบความถูกต้องของไฟล์ YAML (Syntax Check)
+docker compose config
+
+# สั่งรันระบบในพื้นหลัง (Background)
+docker compose up -d
+
+# สั่งรันพร้อมบังคับ Build ใหม่ (กรณีมีการแก้ไข Dockerfile หรือ Config)
+docker compose up -d --build
+
+# ดูสถานะของ Container ใน Compose
+docker compose ps
+
+# สั่งหยุดและลบ Container/Network ทั้งหมดในโปรเจ็กต์
+docker compose down
+```
+
+
+
+
+
+
