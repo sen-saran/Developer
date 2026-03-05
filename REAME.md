@@ -3,11 +3,22 @@
 คู่มือสรุปคำสั่ง Docker ที่จำเป็นสำหรับการพัฒนาซอฟต์แวร์ ตั้งแต่การจัดการ Container ไปจนถึงการทำ Orchestration เบื้องต้นด้วย Compose
 
 #### 1. Infrastructure Docker Container
-<======= vm =======><======= vm =======><======= vm =======>
-<========= Network ===========><======== Network ==========>  
-<====================== Docker Engine =====================>
-<======== Network ==========><======= IPAM Driver =========>  
-<================= Network Infrastructure =================>
+
+โครงสร้างสถาปัตยกรรมของ Docker ที่ช่วยให้การรันแอปพลิเคชันมีประสิทธิภาพสูงและกินทรัพยากรน้อยกว่า VM ทั่วไป
+
+| Layer | คำอธิบาย |
+| :--- | :--- |
+| **Containers** | แอปพลิเคชันที่ถูกแพ็กไว้ (เช่น WordPress, MySQL) |
+| **Docker Engine** | ตัวกลางจัดการ Container และทรัพยากรระบบ |
+| **Network & IPAM** | ส่วนจัดการหมายเลข IP และการเชื่อมต่อสื่อสาร |
+| **Infrastructure** | ทรัพยากรพื้นฐาน (Host OS, Hardware, Cloud) |
+
+---
+**สถาปัตยกรรมเครือข่ายภายใน:**
+1. **Network Infrastructure**: ระบบพื้นฐานด้าน Network
+2. **IPAM Driver**: จัดสรร IP Address ให้แต่ละ Container อัตโนมัติ
+3. **Docker Engine**: ควบคุมทุกอย่างผ่านพื้นฐาน Network เดียวกัน
+4. **Isolated Environments**: แบ่งโซนการทำงานชัดเจนเสมือนมี Server หลายเครื่อง
 
 #### 2. คำสั่งจัดการสถานะ (Container Management)
 ### คำสั่งจัดการ Container
