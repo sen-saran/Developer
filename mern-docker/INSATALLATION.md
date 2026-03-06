@@ -434,24 +434,3 @@ docker compose -f docker-compose.prod.yml config
 # คำสั่งรันแอปพลิเคชันในโหมด production
 docker compose -f docker-compose.prod.yml up -d --build
 ```
-
-## 2. Docker Python Django Application และ UV
-> การสร้างและรันแอปพลิเคชัน Python Django ด้วย Docker 
-
-## 🏗️ โครงสร้างโปรเจ็กต์
-
-```
-pythondjango-docker/
-├── Dockerfile                  # Dockerfile สำหรับ Development
-├── Dockerfile.prod             # Dockerfile สำหรับ Production (multi-stage)
-├── docker-compose.yml          # สภาพแวดล้อม Development
-├── docker-compose.prod.yml     # สภาพแวดล้อม Production
-├── .dockerignore               # ไฟล์ Docker ignore
-├── .env                        # Template สำหรับสภาพแวดล้อม Production
-└── docker/
-    ├── nginx/
-    │   ├── nginx.conf          # การตั้งค่าหลัก Nginx
-    │   └── default.conf        # การตั้งค่าไซต์ Nginx
-    └── postgres/
-        └── init.sql            # การเริ่มต้น PostgreSQL
-```
