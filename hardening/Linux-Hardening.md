@@ -5,8 +5,7 @@
 > Server — Step by Step
 ```bash
 ssh misp@172.17.1.227
-
-ssh root@172.17.1.227
+ssh digitalsaran@172.17.1.227 -p 717
 sudo userdel -f -r digitaldmb
 
 sudo su
@@ -296,7 +295,21 @@ netstat -tulpn
 # ─── ปิด service ที่ไม่ใช้ ────────────────────────────────────────────────────
 sudo systemctl disable bluetooth
 sudo systemctl stop bluetooth
+
+## ตรวจสอบ Port และ Service
+
+# ─── ตรวจ port ────────────────────────────────────────────────────────────
+sudo ss -tulnp
+
+# ─── ตรวจ service ─────────────────────────────────────────────────────────
+systemctl list-unit-files --type=service
+
+# ─── ปิด service ที่ไม่ใช้ ────────────────────────────────────────────────
+sudo systemctl disable --now cups
+sudo systemctl disable --now avahi-daemon
+sudo systemctl disable --now bluetooth
 ```
+
 
 ## File Integrity Monitoring
 
@@ -310,8 +323,11 @@ sudo apt install -y aide
 # เลือก Internet Site ที่ควรใส่: misp-wazuh.local หรือ saran.j@dms.mail.go.th
 # ─── สร้าง database ───────────────────────────────────────────────────────
 sudo aideinit
+sudo ls -l /var/lib/aide/
+# ───  ย้ายไฟล์ฐานข้อมูลให้ระบบเรียกใช้ได้ ──────────────────────────────────
+sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
 # ─── ตรวจสอบระบบ ──────────────────────────────────────────────────────────
-sudo aide --check
+sudo aide --config /etc/aide/aide.conf --check
 ```
 
 ## Rootkit & Malware Detection
@@ -323,9 +339,14 @@ sudo aide --check
 ```bash
 # ─── ติดตั้ง ──────────────────────────────────────────────────────────────
 sudo apt install -y rkhunter chkrootkit
-sudo rkhunter --update
 
 # ─── ตรวจสอบระบบ ──────────────────────────────────────────────────────────
+# 1. อัปเดตฐานข้อมูลมัลแวร์
+sudo rkhunter --update
+# 2. จดจำค่า Hash ของไฟล์ระบบปัจจุบัน (เพื่อไม่ให้มันแจ้งเตือนมั่ว)
+sudo rkhunter --propupd
+# 3. เริ่มทำการสแกน
+sudo rkhunter --check --sk
 sudo rkhunter --check
 sudo chkrootkit
 ```
@@ -363,11 +384,20 @@ kernel.randomize_va_space = 2
 # ปิด SUID core dump
 fs.suid_dumpable = 0
 ```
-
-```bash
+```
 # ─── Apply ────────────────────────────────────────────────────────────────
 sudo sysctl -p /etc/sysctl.d/99-security.conf
+
+# ─── ldd /bin/ls | grep libc (การป้องกันหน่วยความจำ - ASLR) ───────────────────────────────────
+ldd /bin/ls | grep libc
+
+# ─── icmp_echo_ignore_broadcasts = 1 (ป้องกัน Smurf Attack) ───────────────────────────────────
+cat /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+
+# ─── net.ipv4.tcp_syncookies = 1 (ป้องกัน SYN Flood)───────────────────────────────────
+sudo sysctl net.ipv4.tcp_syncookies
 ```
+
 
 ---
 
@@ -384,6 +414,9 @@ install usb-storage /bin/true
 
 # ─── reload ───────────────────────────────────────────────────────────────
 sudo update-initramfs -u
+
+# วิธีทดสอบว่า USB ถูกปิดจริงไหม
+lsmod | grep usb_storage
 ```
 
 ---
@@ -400,6 +433,26 @@ sudo chattr +a /var/log/syslog
 
 # ─── ตรวจสอบ ──────────────────────────────────────────────────────────────
 lsattr /var/log/auth.log
+# ลองเขียนต่อท้าย (ต้องผ่าน)
+echo "Test append" | sudo tee -a /var/log/auth.log
+# ลองลบเนื้อหาทิ้ง (ต้องพัง/Denied)
+sudo truncate -s 0 /var/log/auth.log
+# ลองลบไฟล์ทิ้ง (ต้องพัง/Denied)
+sudo rm /var/log/auth.log
+
+วิเคราะห์ผลการทดสอบของคุณ
+
+    lsmod | grep usb_storage (ว่างเปล่า): ยืนยันว่า Driver USB ถูกบล็อกถาวรแล้ว ใครเอา Flash Drive มาเสียบที่เครื่องตอนนี้ ระบบจะมองไม่เห็นและอ่านข้อมูลไม่ได้เลย
+
+    lsattr: Permission denied: สาเหตุที่คุณเห็น Error นี้เพราะไฟล์ /var/log/auth.log มีสิทธิ์การเข้าถึงที่เข้มงวดมาก (640 หรือ 600) คุณต้องใช้ sudo นำหน้าครับ เช่น:
+
+        วิธีที่ถูก: sudo lsattr /var/log/auth.log
+
+    echo "Test append" | sudo tee -a ... (ผ่าน): ระบบอนุญาตให้ "เขียนต่อท้าย" ได้ตามปกติ (Append-only ทำงาน)
+
+    truncate ... Operation not permitted (สำเร็จ!): นี่คือหัวใจสำคัญครับ แม้คุณจะเป็น root (ผ่าน sudo) แต่ระบบไฟล์ไม่อนุญาตให้ล้างเนื้อหา (Clear log) นี่คือฝันร้ายของ Hacker ที่พยายามจะลบร่องรอยตัวเอง
+
+    rm ... Operation not permitted (สำเร็จ!): พยายามจะลบไฟล์ทิ้งก็ทำไม่ได้ครับ ไฟล์นี้จะกลายเป็น "อมตะ" ตราบใดที่ยังมี Flag +a อยู่
 ```
 
 ---
@@ -410,33 +463,20 @@ lsattr /var/log/auth.log
 - ป้องกัน malware ใช้ cron persistence
 
 ```bash
-# ─── อนุญาตเฉพาะ adminadmin ──────────────────────────────────────────────
-sudo bash -c 'echo "adminadmin" > /etc/cron.allow'
+# ─── อนุญาตเฉพาะ digitalsaran@ ──────────────────────────────────────────────
+sudo bash -c 'echo "digitalsaran@" > /etc/cron.allow'
 
 # ─── บล็อก user อื่นทั้งหมด ───────────────────────────────────────────────
 # cron.deny ต้องมีอยู่และว่างเปล่า (หรือระบุ user ที่ต้องการบล็อก)
 sudo bash -c '> /etc/cron.deny'
+# เช็คสถานะปัจจุบัน
+crontab -l
+# ลองใช้ User อื่น (ถ้ามี)
+sudo -u nobody crontab -e
 ```
 
 ---
 
-## ตรวจสอบ Port และ Service
-
-**เหตุผล**
-- ปิด service ที่ไม่ใช้
-
-```bash
-# ─── ตรวจ port ────────────────────────────────────────────────────────────
-sudo ss -tulnp
-
-# ─── ตรวจ service ─────────────────────────────────────────────────────────
-systemctl list-unit-files --type=service
-
-# ─── ปิด service ที่ไม่ใช้ ────────────────────────────────────────────────
-sudo systemctl disable --now cups
-sudo systemctl disable --now avahi-daemon
-sudo systemctl disable --now bluetooth
-```
 
 ---
 
@@ -449,7 +489,7 @@ sudo systemctl disable --now bluetooth
 # ─── แก้ไข sudoers ────────────────────────────────────────────────────────
 sudo visudo
 # เพิ่มบรรทัดนี้:
-# Defaults logfile="/var/log/sudo.log"
+Defaults logfile="/var/log/sudo.log"
 
 # ─── ตรวจสอบ ──────────────────────────────────────────────────────────────
 sudo tail /var/log/sudo.log
