@@ -1,6 +1,7 @@
-# 🛡️ Linux Hardening Guide
+# 🛡️ Linux Hardening
+---
 ## Ubuntu 24.04 LTS
-dmb@2025digitaldevowncloud
+
 > Server — Step by Step
 ```bash
 ssh misp@172.17.1.227
@@ -281,7 +282,9 @@ sudo ausearch -k ssh_changes
 # ─── ดูรายงานสรุปประจำวัน (ใคร Login, รันคำสั่งอะไรบ้าง): ────────────────────────────────────────
 sudo aureport -f -i
 ```
-** ความปลอดภัยขั้นสุด
+
+# 🛡️🛡️ Linux Hardening ความปลอดภัยขั้นสุด
+---
 
 ## ปิด Service ที่ไม่จำเป็น
 ```bash
