@@ -1,203 +1,222 @@
 # 🛡️ Linux Hardening Guide
 ## Ubuntu 24.04 LTS
-
+dmb@2025digitaldevowncloud
 > Server — Step by Step
-
----
-
-## Phase 1: อัปเดตระบบ (System Update)
-
-> สิ่งแรกที่ต้องทำหลังติดตั้ง Ubuntu Server คือการอัปเดตแพตช์ความปลอดภัย
-
 ```bash
-# ─── อัปเดต Package List & Upgrade ทุก Package ───────────────────────────
-sudo apt update && sudo apt upgrade -y
+ssh misp@172.17.1.227
 
-# ─── ติดตั้ง unattended-upgrades (Security Patch อัตโนมัติ) ──────────────
+ssh root@172.17.1.227
+sudo userdel -f -r digitaldmb
+
+sudo su
+sudo apt update && sudo apt upgrade -y
+sudo dpkg-reconfigure --priority=low unattended-upgrades
 sudo apt install -y unattended-upgrades apt-listchanges
 
-# ─── เปิดใช้งาน Auto Security Updates ────────────────────────────────────
-sudo dpkg-reconfigure --priority=low unattended-upgrades
-```
+sudo adduser digitalsaran
+sudo usermod -aG sudo digitalsaran
+exit
 
-**เหตุผล**
-
-- ปิดช่องโหว่ด้านความปลอดภัยที่ถูกค้นพบล่าสุด
-- แพตช์ kernel และ package สำคัญ
-- ลบ package ที่ไม่จำเป็นออกเพื่อลด attack surface
-
----
-
-## Phase 2: จัดการผู้ใช้และสิทธิ์ (User & Privilege Management)
-
-```bash
-# ─── สร้าง User ใหม่ ──────────────────────────────────────────────────────
-# หลีกเลี่ยงการใช้ root โดยตรง
-sudo adduser adminadmin
-
-# ─── เพิ่มเข้ากลุ่ม sudo ──────────────────────────────────────────────────
-sudo usermod -aG sudo adminadmin
-
-# ─── ตรวจสอบสิทธิ์ ────────────────────────────────────────────────────────
+ssh digitalsaran@172.17.1.227
 grep sudo /etc/group
-su - adminadmin
-sudo whoami
-# ผลลัพธ์: root
-```
 
----
+# ─── Authentication Key-Pair ───────────────────────────
+mkdir ~/.ssh && chmod 700 ~/.ssh
+logout
+ssh-keygen -b 4096
+cd .ssh
+ls
+# ─── Trenfers .pub to Server ───────────────────────────
+scp $env:USERPROFILE/.ssh/id_ed25519.pub digitalsaran@172.17.1.227:~/.ssh/authorized_keys
+ssh digitalsaran@172.17.1.227
 
-## Phase 3: Harden SSH ให้ปลอดภัย
-
-### 3.1 แก้ไข SSH Config บน Server
-
-```bash
-# ─── Backup Config เดิมก่อน ───────────────────────────────────────────────
-sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
-
-# ─── แก้ไข SSH Config ─────────────────────────────────────────────────────
+# ─── แก้ไข SSH Config ─────────────────────────────────────────────
 sudo nano /etc/ssh/sshd_config
-```
+# ปรับ Port หนี Bot
+Port 717
+# Disable ipv6
+AddressFamily inet
 
-เปลี่ยนค่าต่อไปนี้:
-
-```ini
-# เปลี่ยน Port จาก 22 (ลด Bot Scanning attack)
-Port 2222
-
-# ปิด Root Login
+# ความปลอดภัยพื้นฐาน (บังคับ)
 PermitRootLogin no
-
-# ปิด Password Login (ใช้ Key เท่านั้น)
+PubkeyAuthentication yes
 PasswordAuthentication no
 PermitEmptyPasswords no
 
-# เปิด Key Authentication
-PubkeyAuthentication yes
+# จำกัด User (ป้องกันคนอื่นแอบสร้าง User แล้วเข้าเครื่องได้)
+AllowUsers digitalsaran msip
 
-# จำกัด User ที่ SSH ได้
-AllowUsers adminadmin
-
-# ปิด X11 Forwarding
-X11Forwarding no
-
-# Timeout Settings
-ClientAliveInterval 300
-ClientAliveCountMax 2
-LoginGraceTime 60
-
-# ใช้ Protocol 2 เท่านั้น
-Protocol 2
-
-# จำกัดจำนวน Auth ที่ทำได้
+# ป้องกันการเดารหัสซ้ำๆ ใน Session เดียว
 MaxAuthTries 3
-MaxSessions 5
-```
 
-```bash
-# ─── ตรวจสอบ Syntax ก่อน Restart ─────────────────────────────────────────
+# ─── Check Syntax: (ถ้าไม่มี Error แสดงว่าผ่าน) ────────────────────────────
 sudo sshd -t
-echo "Syntax OK"
 
-# ─── Restart SSH ──────────────────────────────────────────────────────────
-# ⚠️ อย่าปิด Terminal เดิมก่อนทดสอบ Terminal ใหม่!
-sudo systemctl restart sshd
+# ─── Restart ──────────────────────────────────────────────────────────
+systemctl list-units --type=service | grep ssh
+sudo systemctl restart ssh
+sudo ufw allow 717/tcp
+sudo ss -tulnp | grep 717
+
+# ─── อย่าเพิ่ง Logout ให้เปิด Terminal ใหม่ เข้าไปดูว่าเข้าได้จริงไหม ─────────────
+ssh digitalsaran@172.17.1.227 -p 717
+ssh -p 717 digitalsaran@172.17.1.227
+
 ```
 
-### 3.2 สร้าง SSH Key บนเครื่อง Local
-
-```bash
-# ─── รันบนเครื่อง Local ของคุณ ────────────────────────────────────────────
-ssh-keygen -t ed25519 -C "your@email.com"
-
-# ─── Copy Public Key ไปยัง Server ─────────────────────────────────────────
-ssh-copy-id -p 2222 adminadmin@your-server-ip
-
-# ─── ทดสอบ Login ด้วย Key ─────────────────────────────────────────────────
-ssh -p 2222 adminadmin@your-server-ip
+# กรณีไม่ได้ ss -tulnp ไม่เห็น 717
+ ```bash
+sudo ss -tulnp | grep 717
+sudo systemctl stop ssh.socket     # หยุดตัวคุม Port 22
+sudo systemctl stop ssh            # หยุด Service
+sudo systemctl edit ssh.socket
+sudo systemctl daemon-reload       # โหลดค่าที่แก้ใหม่
+sudo systemctl start ssh.socket    # เริ่ม Socket ใหม่ (จะไปจับ Port 717 แทน)
+sudo systemctl start ssh           # เริ่ม Service
 ```
-
----
-
-## Phase 4: ตั้งค่า UFW Firewall
+## ตั้งค่า UFW Firewall
 
 ```bash
 # ─── ติดตั้ง UFW ──────────────────────────────────────────────────────────
 sudo apt install -y ufw
+
+# ─── ตรวจสอบ Rules ────────────────────────────────────────────────────────
+sudo ufw status verbose
+
+# ─── เปิดใช้งาน UFW ───────────────────────────────────────────────────────
+sudo ufw enable 
 
 # ─── ตั้งค่า Default Policy ───────────────────────────────────────────────
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
 # ─── อนุญาต SSH Port ───────────────────────────────────────────────────────
-sudo ufw allow 2222/tcp comment 'SSH Custom Port'
+sudo ufw allow 717/tcp comment 'SSH Custom Port'
 
 # ─── อนุญาต HTTP และ HTTPS ────────────────────────────────────────────────
 sudo ufw allow 80/tcp  comment 'HTTP'
 sudo ufw allow 443/tcp comment 'HTTPS'
 
-# ─── เปิดใช้งาน UFW ───────────────────────────────────────────────────────
-sudo ufw enable
+# ─── ปิด IPV6 ────────────────────────────────────────────────
+sudo nano /etc/default/ufw
+# เปลี่ยน IPV6=yes
+IPV6=no
 
-# ─── ตรวจสอบ Rules ────────────────────────────────────────────────────────
-sudo ufw status verbose
+# reload
+sudo ufw reload
+
+# ตรวจสอบหมายเลขบรรทัด
+sudo ufw status numbered
+
+# ลบบรรทัดที่เป็น (v6) ออก เช่น ถ้า v6 อยู่บรรทัดที่ 4, 5, 6
+sudo ufw delete 6
+sudo ufw delete 5
+sudo ufw delete 4
+
+# ตรวจสอบสถานะ
+sudo ufw status
+```
+## ตั้งค่า ICMP
+
+```bash
+# ─── ตั้งค่า ICMP ──────────────────────────────────────────────────────────
+sudo nano /etc/ufw/before.rules
+
+# 1. อนุญาตให้ IP ที่ระบุ (เช่นเครื่องคุณ) สามารถ Ping ได้
+-A ufw-before-input -p icmp --icmp-type echo-request -s 172.17.1.50 -j ACCEPT
+
+# 2. อนุญาตให้ตัวเอง (Loopback) Ping ตัวเองได้ (สำคัญสำหรับการทำงานของระบบ)
+-A ufw-before-input -p icmp --icmp-type echo-request -i lo -j ACCEPT
+
+# 3. สั่ง DROP การ Ping จาก IP อื่นๆ ที่เหลือทั้งหมด
+-A ufw-before-input -p icmp --icmp-type echo-request -j DROP
+
+# 4. อนุญาตให้ IP ที่ระบุ วง Network สามารถ Ping ได้
+-A ufw-before-input -p icmp --icmp-type echo-request -s 192.168.1.0/24 -j ACCEPT
+
+# reload
+sudo ufw reload
 ```
 
----
+## การตรวจสอบ Log การเข้าใช้งาน (Auth & SSH)
 
-## Phase 5: ป้องกัน Brute Force ด้วย Fail2ban
+```bash
+# ─── ดูประวัติการ Login ล่าสุด ────────────────────────────
+last -a
+
+# ─── ดู Log การพยายามเข้าใช้งาน (Real-time) ────────────
+# ดูความพยายาม Login ทั้งหมด รวมถึง SSH และการใช้ sudo
+sudo tail -f /var/log/auth.log
+
+# ─── ดูเฉพาะคนที่ Login ผิด (Failed Password) ──────────
+sudo grep "Failed password" /var/log/auth.log
+sudo tail -f /var/log/syslog
+vim /var/log/fail2ban.log
+```
+## ป้องกัน Brute Force ด้วย Fail2ban
 
 ```bash
 # ─── ติดตั้ง Fail2Ban ─────────────────────────────────────────────────────
 sudo apt install -y fail2ban
+systemctl status fail2ban
 
 # ─── สร้าง Local Config ────────────────────────────────────────────────────
 sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
-sudo nano /etc/fail2ban/jail.local
+sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
+sudo fail2ban-client status
 ```
 
 เปลี่ยนค่าต่อไปนี้:
-
 ```ini
-[DEFAULT]
-# Ban IP เป็นเวลา 1 ชั่วโมง
-bantime  = 3600
-# ช่วงเวลาตรวจสอบ 10 นาที
-findtime = 600
-# พยายาม Login ผิด 5 ครั้ง = Ban
-maxretry = 5
-# Backend
-backend = systemd
-
+sudo nano /etc/fail2ban/jail.local
 [sshd]
 enabled  = true
-port     = 2222
+port     = 717                              # สำคัญ: ต้องแก้ให้ตรงกับ Port ที่เราเปลี่ยน
+mode     = aggressive
 filter   = sshd
-logpath  = /var/log/auth.log
-maxretry = 5
-bantime  = 7200
-
-[nginx-http-auth]
-enabled = true
-
-[nginx-limit-req]
-enabled = true
+backend  = systemd
+logpath  = /var/log/auth.log                # Ubuntu 24.04 แนะนำให้ใช้ backend=systemd แทนการระบุ logpath ตรงๆ
+maxretry = 3                                # จำนวนครั้งที่พลาดได้ก่อนโดนแบน ลองผิดได้ 3 ครั้ง (เข้มงวดตาม MaxAuthTries ใน sshd_config) 
+bantime  = 1d                               # แบน IP นานแค่ไหน (m = นาที, h = ชั่วโมง, d = วัน)
+findtime = 10m                             # ช่วงเวลาที่นับจำนวนครั้งที่พลาดตรวจสอบภายในระยะเวลา 10 นาที  
+ignoreip = 127.0.0.1/8 ::1 10.6.88.0/24    # ใส่ IP เครื่องคุณที่ใช้ Login ประจำ (White-list) ไม่ให้โดนแบน [Localhost] [IPv6-Local] [IP-WiFi] [วง-LAN]
 ```
 
 ```bash
 # ─── เริ่มใช้งาน Fail2Ban ─────────────────────────────────────────────────
 sudo systemctl enable fail2ban
 sudo systemctl start fail2ban
+sudo systemctl restart fail2ban
 
 # ─── ตรวจสอบสถานะ ─────────────────────────────────────────────────────────
 sudo systemctl status fail2ban
 sudo fail2ban-client status
+
+# จะเห็นรายการ IP ในส่วน Banned IP list
 sudo fail2ban-client status sshd
+
+
+# ─── The "Fake Attack" Test  ──────────────────────────────────────────────────
+# พิมพ์รหัสผ่านมั่วๆ ให้ครบตามจำนวน maxretry (ที่คุณตั้งไว้คือ 3 ครั้ง)
+ssh -p 717 attack@172.17.1.227
+
+# ตรวจสอบผลบน Server Currently banned จะเปลี่ยนจาก 0 เป็น 1
+sudo fail2ban-client status sshd
+
+# ใน Banned IP list จะปรากฏ เลข IP ของคุณ [sshd] Ban 1.2.3.4
+sudo tail -f /var/log/fail2ban.log
+
+# ดู Log ของ Fail2ban เพื่อดูว่ามีใครพยายามบุกรุก
+sudo tail -f /var/log/fail2ban.log
+
+# ถ้าเผลอทำตัวเองโดนแบน (Unban)
+sudo fail2ban-client set sshd unbanip [เลข_IP_ที่โดนแบน]
+
+# เริ่มเห็น IP แปลกๆ โดนแบน แล้วอยากรู้ว่าเป็นใคร (เช่น มาจากประเทศไหน) ให้ใช้คำสั่ง geoiplookup (ถ้าติดตั้งไว้) หรือใช้ curl
+curl ipinfo.io/[เลข_IP_ที่โดนแบน]
 ```
 
----
-
-## Phase 6: เปิด Mandatory Access Control (AppArmor)
+## เปิด Mandatory Access Control (AppArmor)
 
 ```bash
 # ─── ตรวจสอบสถานะ ─────────────────────────────────────────────────────────
@@ -206,14 +225,13 @@ sudo aa-status
 # ─── เปิด AppArmor ────────────────────────────────────────────────────────
 sudo systemctl enable apparmor
 sudo systemctl start apparmor
-
+sudo systemctl status apparmor
 # ─── ตรวจสอบ ──────────────────────────────────────────────────────────────
 sudo aa-status | less
+sudo dmesg | grep -i apparmor
 ```
 
----
-
-## Phase 7: เปิด Audit Logging (Security Audit)
+## เปิด Audit Logging (Security Audit)
 
 **เหตุผล**
 - บันทึก security event
@@ -253,11 +271,31 @@ sudo nano /etc/audit/rules.d/hardening.rules
 ```bash
 # ─── โหลด rule ────────────────────────────────────────────────────────────
 sudo augenrules --load
+
+# ─── ลอง "แตะ" ไฟล์ SSH Config (แค่เปลี่ยนเวลาไฟล์ ไม่ต้องแก้เนื้อหา): ───────────────
+sudo touch /etc/ssh/sshd_config
+
+# ─── ดูว่าใครแอบแก้ไฟล์ SSH Config: ────────────────────────────────────────
+sudo ausearch -k ssh_changes
+
+# ─── ดูรายงานสรุปประจำวัน (ใคร Login, รันคำสั่งอะไรบ้าง): ────────────────────────────────────────
+sudo aureport -f -i
+```
+** ความปลอดภัยขั้นสุด
+
+## ปิด Service ที่ไม่จำเป็น
+```bash
+# ─── Check Service  ─────────────────────────────────────────────────────
+systemctl list-unit-files --type=service
+systemctl list-units --type=service --state=running
+netstat -tulpn
+
+# ─── ปิด service ที่ไม่ใช้ ────────────────────────────────────────────────────
+sudo systemctl disable bluetooth
+sudo systemctl stop bluetooth
 ```
 
----
-
-## Phase 8: File Integrity Monitoring
+## File Integrity Monitoring
 
 **เหตุผล**
 - ตรวจสอบไฟล์ระบบถูกแก้ไข
@@ -266,17 +304,14 @@ sudo augenrules --load
 ```bash
 # ─── ติดตั้ง AIDE ─────────────────────────────────────────────────────────
 sudo apt install -y aide
-
+# เลือก Internet Site ที่ควรใส่: misp-wazuh.local หรือ saran.j@dms.mail.go.th
 # ─── สร้าง database ───────────────────────────────────────────────────────
 sudo aideinit
-
 # ─── ตรวจสอบระบบ ──────────────────────────────────────────────────────────
 sudo aide --check
 ```
 
----
-
-## Phase 9: Rootkit & Malware Detection
+## Rootkit & Malware Detection
 
 **เหตุผล**
 - ตรวจ rootkit
@@ -291,10 +326,7 @@ sudo rkhunter --update
 sudo rkhunter --check
 sudo chkrootkit
 ```
-
----
-
-## Phase 10: Kernel Hardening (sysctl)
+## Kernel Hardening (sysctl)
 
 **เหตุผล**
 - ป้องกัน network spoofing
@@ -336,7 +368,7 @@ sudo sysctl -p /etc/sysctl.d/99-security.conf
 
 ---
 
-## Phase 11: จำกัดการใช้ USB Storage
+## จำกัดการใช้ USB Storage
 
 **เหตุผล**
 - ป้องกันการขโมยข้อมูลผ่าน USB
@@ -353,7 +385,7 @@ sudo update-initramfs -u
 
 ---
 
-## Phase 12: Secure Log Files (Immutable Logs)
+## Secure Log Files (Immutable Logs)
 
 **เหตุผล**
 - log จะ append ได้อย่างเดียว attacker ลบไม่ได้
@@ -369,7 +401,7 @@ lsattr /var/log/auth.log
 
 ---
 
-## Phase 13: จำกัด Cron Access
+## จำกัด Cron Access
 
 **เหตุผล**
 - ป้องกัน malware ใช้ cron persistence
@@ -385,7 +417,7 @@ sudo bash -c '> /etc/cron.deny'
 
 ---
 
-## Phase 14: ตรวจสอบ Port และ Service
+## ตรวจสอบ Port และ Service
 
 **เหตุผล**
 - ปิด service ที่ไม่ใช้
@@ -405,7 +437,7 @@ sudo systemctl disable --now bluetooth
 
 ---
 
-## Phase 15: Secure Sudo Logging
+## Secure Sudo Logging
 
 **เหตุผล**
 - log ทุก command ที่ใช้ sudo
@@ -419,3 +451,4 @@ sudo visudo
 # ─── ตรวจสอบ ──────────────────────────────────────────────────────────────
 sudo tail /var/log/sudo.log
 ```
+
