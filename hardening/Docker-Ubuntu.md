@@ -204,13 +204,40 @@ docker network inspect owncloud-docker-server_default
 
 sudo ufw allow 8080/tcp  comment 'HTTP'
 ss -tulnp | grep 8080
-
+# reload
+sudo ufw reload
 http://172.17.1.227:8080
 
 docker volume ls | grep files
 docker compose logs --follow owncloud
-
+docker logs owncloud_mariadb
+docker logs owncloud_server
+docker exec -it owncloud_mariadb mysql -u root -p
+SHOW DATABASES;
+USE owncloud;
+SHOW TABLES;
 docker compose down
+
+# วิธีแก้ (แก้ config)
+# เข้า container
+docker exec -it owncloud_server bash
+
+# เปิดไฟล์
+apt update && apt install nano -y
+nano /var/www/owncloud/config/config.php
+
+# แก้จากแบบนี้
+'trusted_domains' =>
+array (
+  0 => '172.17.1.227',
+  1 => 'localhost',
+),
+
+# ออกจาก container
+exit
+
+# restart
+docker restart owncloud_server
 ```
 
 
