@@ -222,6 +222,9 @@ docker compose down
 # เข้า container
 docker exec -it owncloud_server bash
 
+# หรือเข้า container 
+sudo nano /var/lib/docker/volumes/owncloud-docker-server_files/_data/config/config.php
+
 # เปิดไฟล์
 apt update && apt install nano -y
 nano /var/www/owncloud/config/config.php
@@ -229,9 +232,13 @@ nano /var/www/owncloud/config/config.php
 # แก้จากแบบนี้
 'trusted_domains' =>
 array (
-  0 => '172.17.1.227',
-  1 => 'localhost',
+  0 => 'localhost',
+  1 => '172.17.1.227',
+  2 => '172.17.1.227:8080',
 ),
+'overwrite.cli.url' => 'http://172.17.1.227:8080',
+'overwritehost' => '172.17.1.227:8080',
+'overwriteprotocol' => 'http',
 
 # ออกจาก container
 exit
