@@ -201,6 +201,10 @@ docker ps
 
 docker network ls
 docker network inspect owncloud-docker-server_default
+
+sudo ufw allow 8080/tcp  comment 'HTTP'
+ss -tulnp | grep 8080
+
 http://172.17.1.227:8080
 
 docker volume ls | grep files
