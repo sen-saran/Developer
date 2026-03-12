@@ -181,6 +181,11 @@ MYSQL_PASSWORD=StrongDBPassword!2026
 MYSQL_DATABASE=owncloud
 EOF
 ```
+# Docker container Hardening
+```bash
+docker ps
+
+```
 ```bash
 ls
 ls -la
@@ -198,6 +203,9 @@ docker ps
 # owncloud_server   Up (health: starting)
 # owncloud_redis    Up (healthy)
 # owncloud_mariadb  Up (healthy)
+
+
+
 
 docker network ls
 docker network inspect owncloud-docker-server_default
@@ -246,10 +254,106 @@ exit
 # restart
 docker restart owncloud_server
 ```
+docker exec -it owncloud_server php occ user:list
+docker ps
+
+docker exec -it owncloud_mariadb mysql -u root -p -e "SHOW DATABASES;"
+
+docker exec -it owncloud_mariadb mysql -u root -p
+
+# ดู DATABASES ทั้งหมด
+SHOW DATABASES;
+
+# เลือก owncloud
+USE owncloud;
+
+# แสดง TABLES
+SHOW TABLES;
+
+# ดู user ทั้งหมด
+SELECT * FROM oc_users;
+
+# ดูจำนวน user
+SELECT COUNT(*) FROM oc_users;
+
+# ดู groups
+SELECT * FROM oc_groups;
+
+# ดู id user
+SELECT numeric_id,id 
+FROM oc_storages 
+WHERE id LIKE 'home::%';
+
+# ดู user quota
+SELECT userid, configvalue AS quota 
+FROM oc_preferences 
+WHERE configkey='quota';
+
+# ดู user file all
+SELECT path, ROUND(size/1024/1024,2) AS MB 
+FROM oc_filecache 
+WHERE storage = 8
+ORDER BY size DESC;
+
+# ดู user file files
+SELECT path
+FROM oc_filecache
+WHERE storage=8
+AND path LIKE 'files/%';
+
+# ดู 1 user file size
+SELECT  ROUND(SUM(size)/1024/1024,2) AS MB 
+FROM oc_filecache 
+WHERE storage=8;
+
+# ดู ทั้งหมด user file size
+SELECT
+SUBSTRING_INDEX(s.id,'::',-1) AS username,
+ROUND(SUM(f.size)/1024/1024,2) AS MB
+FROM oc_filecache f
+JOIN oc_storages s
+ON f.storage = s.numeric_id
+WHERE s.id LIKE 'home::%'
+GROUP BY username;
+
+
+# ดู storage usage
+SELECT storage, SUM(size)
+FROM oc_filecache
+GROUP BY storage;
+
+# ดู mapping storage
+SELECT * FROM oc_storages;
+
+# ดูไฟล์ user ทั้งหมด
+SELECT path,size
+FROM oc_filecache
+WHERE storage=8;
+
+# ดูไฟล์ user ที่อัพโหลด
+SELECT path,size
+FROM oc_filecache
+WHERE storage=8
+AND path LIKE 'files/%';
+
+# วิธีตรวจว่ามีการแชร์
+SELECT
+id,
+share_type,
+uid_owner,
+share_with
+FROM oc_share;
 
 
 
+# ดูไฟล์ทั้งหมดในระบบ
+SELECT COUNT(*) FROM oc_filecache;
 
+ดู path ทั้งหมดที่ไม่ซ้ำ
+SELECT DISTINCT SUBSTRING_INDEX(path,'/',1) FROM oc_filecache;
+SELECT DISTINCT SUBSTRING_INDEX(path,'/files',8) FROM oc_filecache;
+Query user + storage ที่ถูกต้อง
+SELECT * FROM oc_storages;
 
 
 
