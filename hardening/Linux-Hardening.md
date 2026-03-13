@@ -10,6 +10,7 @@ sudo userdel -f -r digitaldmb
 
 sudo su
 sudo apt update && sudo apt upgrade -y
+timedatectl set-timezone Asia/Bangkok
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 sudo apt install -y unattended-upgrades apt-listchanges
 
@@ -23,7 +24,7 @@ grep sudo /etc/group
 # ─── Authentication Key-Pair ───────────────────────────
 mkdir ~/.ssh && chmod 700 ~/.ssh
 logout
-ssh-keygen -b 4096
+ssh-keygen -t ed25519
 cd .ssh
 ls
 # ─── Trenfers .pub to Server ───────────────────────────
@@ -44,7 +45,7 @@ PasswordAuthentication no
 PermitEmptyPasswords no
 
 # จำกัด User (ป้องกันคนอื่นแอบสร้าง User แล้วเข้าเครื่องได้)
-AllowUsers digitalsaran msip
+AllowUsers digitalsaran
 
 # ป้องกันการเดารหัสซ้ำๆ ใน Session เดียว
 MaxAuthTries 3
