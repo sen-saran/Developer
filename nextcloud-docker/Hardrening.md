@@ -462,3 +462,9 @@ UUID=YOUR-UUID /data ext4 defaults,nofail 0 2
 sudo mount -a
 df -h | grep /data
 ```
+
+```bash
+# ทดสอบ
+ sudo grep "Failed password" /var/log/auth.log | wc -l
+ sudo journalctl -u sshd --since "30 days ago" | grep -i "filed" | head -20
+```
