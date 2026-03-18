@@ -2,8 +2,9 @@ server {
     listen 80;
     server_name _;
 
-    client_max_body_size 10G;
-    proxy_read_timeout 3600;
+    # ถ้าใช้งานทั่วไป ไฟล์ไม่ใหญ่
+    client_max_body_size 10G; # 10 GB
+    proxy_read_timeout 3600;  # 1 ชั่วโมง
 
     location / {
         proxy_pass http://nextcloud_app:80;
