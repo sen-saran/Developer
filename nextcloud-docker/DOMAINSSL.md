@@ -43,11 +43,13 @@ ls -la ~/nextcloud/nginx/ssl/
 ### Step 2: เปิดใช้ SSL Config
 ```
 ls nano ~/nextcloud/nginx/
-
+docker exec nextcloud_nginx rm /etc/nginx/conf.d/default.conf
 แก้ domain ใน ssl.conf:
-nano ~/nextcloud/nginx/default.conf 
+nano ~/nextcloud/nginx/ssl.conf 
 ตรวจสอบบรรทัด server_name ให้ตรงกับ domain จริง:
 server_name nextcloud.dms.go.th;  ← แก้ให้ตรง
+กรณี domain ไม่ได้ต่อให้เข้าผ่าน ip จริง
+server_name dmbcloud.dms.go.th 159.138.255.6;
 ```
 
 ### Step 3: แก้ docker-compose.yml
@@ -56,7 +58,6 @@ nano ~/nextcloud/docker-compose.yml
 เพิ่ม mount ssl.conf เข้าไปใน nginx volumes:
 nginx:
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
       - ./nginx/ssl.conf:/etc/nginx/conf.d/ssl.conf
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - /data/nextcloud/files:/var/www/html:ro
@@ -69,6 +70,14 @@ docker exec -u www-data nextcloud_app php occ config:system:set overwrite.cli.ur
 docker exec -u www-data nextcloud_app php occ config:system:set overwritehost --value="nextcloud.dms.go.th"
 docker exec -u www-data nextcloud_app php occ config:system:set overwriteprotocol --value="https"
 docker exec -u www-data nextcloud_app php occ config:system:set trusted_domains 0 --value="nextcloud.dms.go.th"
+# ReCheck เข้า container
+docker exec -it nextcloud_app bash
+
+# เปิดไฟล์
+apt update && apt install nano -y
+# path จริงของ Nextcloud ใน Docker
+nano /var/www/html/config/config.php
+
 แก้ใน .env ด้วย:
 nano ~/nextcloud/.env
 NEXTCLOUD_DOMAIN=nextcloud.dms.go.th
@@ -99,14 +108,32 @@ docker compose up -d
 ```
 ### Step 7: ทดสอบ
 ```
+ถ้าเกินปิด port 80 เลยให้เข้าได้แต่ 443 ได้ไหม
 **# ทดสอบ SSL
 curl -I https://nextcloud.dms.go.th
 
 # ทดสอบ redirect HTTP → HTTPS
-curl -I http://nextcloud.dms.go.th
-```
+curl -I http://dmbcloud.dms.go.th
+curl -I https://dmbcloud.dms.go.th
+หรือเปิด browser: https://dmbcloud.dms.go.th
+ผลที่ควรได้:
+
+http:// → redirect 301 ไป https:// อัตโนมัติ
+https:// → 200 OK ไม่มี browser warning
+# ลบ default.conf ออกจาก container
+docker exec nextcloud_nginx rm /etc/nginx/conf.d/default.conf
+
+# reload
+docker compose exec nginx nginx -s reload
+
+# ทดสอบ
+curl -I http://dmbcloud.dms.go.th
+
 
 ผลที่ควรได้:
-```
+HTTP/1.1 301 Moved Permanently
+Location: https://dmbcloud.dms.go.th
+
 HTTP/2 200
 ```
+
