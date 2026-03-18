@@ -461,10 +461,85 @@ UUID=YOUR-UUID /data ext4 defaults,nofail 0 2
 # ทดสอบ
 sudo mount -a
 df -h | grep /data
+
+วิธีที่ 1: ขยาย Disk เดิม (vdb 1TB → ใหญ่ขึ้น)
+# 1. ขยาย disk บน Huawei Cloud Console ก่อน
+# ECS → Storage → Expand Disk
+
+# 2. ตรวจสอบว่า disk ขยายแล้ว
+lsblk
+
+# 3. ขยาย partition
+sudo growpart /dev/vdb 1
+
+# 4. ขยาย filesystem
+sudo resize2fs /dev/vdb
+
+# 5. ตรวจสอบ
+df -h | grep /data
+
+วิธีที่ 2: เพิ่ม Disk ใหม่ (vdc)
+# 1. เพิ่ม disk บน Huawei Cloud Console ก่อน
+# ECS → Storage → Attach Disk
+
+# 2. Format disk ใหม่
+sudo mkfs.ext4 /dev/vdc
+
+# 3. สร้าง mount point
+sudo mkdir -p /data2
+
+# 4. Mount
+sudo mount /dev/vdc /data2
+
+# 5. เพิ่มใน fstab
+sudo blkid /dev/vdc
+sudo nano /etc/fstab
+# เพิ่ม: UUID=<uuid> /data2 ext4 defaults,nofail 0 2
+
+# 6. ย้ายข้อมูล Nextcloud ไป /data2
+docker compose down
+sudo rsync -av /data/nextcloud/ /data2/nextcloud/
+sudo chown -R $USER:$USER /data2/nextcloud
+
+# 7. แก้ docker-compose.yml ให้ชี้ไป /data2
+nano ~/nextcloud/docker-compose.yml
+# เปลี่ยน /data/nextcloud → /data2/nextcloud
+
+# 8. รันใหม่
+docker compose up -d
+
+วิธีที่ 3: ย้ายข้อมูลไป Disk ใหม่
+เหมือนวิธีที่ 2 แต่ใช้ path /data เดิม:
+# หลัง rsync เสร็จแล้วสลับ mount point
+sudo umount /data
+sudo mount /dev/vdc /data
+
+# แก้ fstab ให้ vdc mount ที่ /data แทน vdb
+sudo nano /etc/fstab
 ```
 
 ```bash
 # ทดสอบ
  sudo grep "Failed password" /var/log/auth.log | wc -l
  sudo journalctl -u sshd --since "30 days ago" | grep -i "filed" | head -20
+```
+### แก้ไขให้เหลือแค่ security updates และปิด auto reboot
+
+```bash
+sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+
+// ปิด auto reboot
+Unattended-Upgrade::Automatic-Reboot "false";
+
+// ลบ package ที่ไม่ใช้อัตโนมัติ
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+// แจ้งเตือนถ้าต้อง reboot
+Unattended-Upgrade::Mail "root";
+
+# บันทึกแล้วตรวจสอบ:
+sudo unattended-upgrade --dry-run --debug 2>&1 | grep -E "Packages|reboot"
+
+# จากนั้นเช็ค reboot history
+last reboot | head -10
 ```
