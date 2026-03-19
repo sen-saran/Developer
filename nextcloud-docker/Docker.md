@@ -160,6 +160,7 @@ nano /var/www/html/config/config.php
 'trusted_domains' =>
 array (
   0 => '159.138.255.6',
+  1 => 'dmbcloud.dms.go.th',
 ),
 'overwrite.cli.url' => 'http://159.138.255.6',
 'overwritehost' => '159.138.255.6',
@@ -206,9 +207,53 @@ crontab -e
 ```cron
 */5 * * * * docker exec -u www-data nextcloud_app php -f /var/www/html/cron.php
 ```
-
 ### ตั้งค่า Nextcloud
+# login เข้าหน้าเว็บไป overview เพื่อแก้ไข error ของ nextcloud
+```
+cd etc/php/7.4/apache2/
+ls
+sudo nano php.ini
+# ctrl+w
+memory_limit = 1028M
+sudo service apache2 restart
 
+cd /var/www/nextcloud/config
+ls
+sudo nano config.php
+'default_phone_region' => 'TH',
+```
+# login เข้าหน้าเว็บไป system เพื่อแก้ไขร upload ไฟล์ ของ nextcloud
+```
+cd etc/php/7.4/apache2/
+ls
+sudo nano php.ini
+# ctrl+w
+upload_max_filesize = 5G
+post_max_size = 5G
+sudo service apache2 restart
+
+sudo apt remove imagemagick-6-common php-imagick
+sudo apt install imagemagick php-imagick
+```
+# การเซ็ทเพื่อเพิ่ม domain ของ nextcloud
+```
+cd /var/www/nextcloud/config
+ls
+sudo nano config.php
+array (
+  0 => '159.138.255.6',
+  1 => 'dmbcloud.dms.go.th:443',
+),
+sudo service apache2 restart
+```
+community document server
+onlyoffice
+adress 
+### ตั้งค่า Nextcloud
+```
+วิธีแก้ปัญหา Docker Container "หลับ" หรือหยุดทำงาน (Sleep/Exit) คือการทำให้ Container มี Process หลักทำงานอยู่ตลอดเวลา โดยใช้คำสั่ง
+-it (Interactive + TTY) เพื่อรันแบบ Interactive mode หรือใช้ -d ร่วมกับคำสั่งที่ไม่จบการทำงาน เช่น tail -f /dev/null หรือใช้ restart policy เพื่อสั่งให้คอนเทนเนอร์ทำงานใหม่ทันทีหากหลุด
+```
 ```bash
 # เช็ค Docker auto-start
 sudo systemctl is-enabled docker
