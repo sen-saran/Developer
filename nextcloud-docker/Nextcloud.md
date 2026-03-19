@@ -8,6 +8,47 @@
 
 - Backup + Update
 ```bash
+### ตั้งค่า Nextcloud
+docker exec -it nextcloud_app bash
+# login เข้าหน้าเว็บไป overview เพื่อแก้ไข error ของ nextcloud
+
+cd /etc/php/7.4/apache2/
+ls
+sudo nano php.ini
+# ctrl+w
+memory_limit = 1028M
+sudo service apache2 restart
+
+cd /var/www/nextcloud/config
+ls
+sudo nano config.php
+'default_phone_region' => 'TH',
+
+# login เข้าหน้าเว็บไป system เพื่อแก้ไขร upload ไฟล์ ของ nextcloud
+
+cd etc/php/7.4/apache2/
+ls
+sudo nano php.ini
+# ctrl+w
+upload_max_filesize = 5G
+post_max_size = 5G
+sudo service apache2 restart
+
+sudo apt remove imagemagick-6-common php-imagick
+sudo apt install imagemagick php-imagick
+
+# การเซ็ทเพื่อเพิ่ม domain ของ nextcloud
+
+cd /var/www/nextcloud/config
+ls
+sudo nano config.php
+array (
+  0 => '159.138.255.6',
+  1 => 'dmbcloud.dms.go.th:443',
+),
+sudo service apache2 restart
+
+
 # backup database
 docker exec nextcloud_db pg_dump -U nextcloud nextcloud > ~/backup_db_$(date +%F).sql
 
