@@ -4,7 +4,69 @@
 - Ransomware protection 
 - GpxEdit 
 - GpxPod 
-- OpenStreetMap integration 
+- OpenStreetMap integration
+
+- Backup + Update
+```bash
+# backup database
+docker exec nextcloud_db pg_dump -U nextcloud nextcloud > ~/backup_db_$(date +%F).sql
+
+# เปลี่ยน image
+sed -i 's/nextcloud:29/nextcloud:30/' ~/nextcloud/docker-compose.yml
+
+# pull และ update
+cd ~/nextcloud
+docker compose pull app
+docker compose stop app
+docker compose up -d app
+
+# รอ 30 วินาที แล้วรัน upgrade
+sleep 30
+docker exec -u www-data nextcloud_app php occ upgrade
+docker exec -u www-data nextcloud_app php occ maintenance:mode --off
+docker exec -u www-data nextcloud_app php occ cache:flush
+
+ตรวจสอบ
+bashdocker exec -u www-data nextcloud_app php occ status
+```
+
+ผลที่ควรได้:
+```
+- version: 30.0.17.0
+- versionstring: Nextcloud 30.0.17
+อัปเดตทีละ version ครับ ข้ามไป 33 เลยไม่ได้ ต้องทำตามลำดับ:
+29 → 30 → 31 → 32 → 33
+
+cd ~/nextcloud
+
+for VERSION in 30 31 32 33; do
+  echo "=== Updating to Nextcloud $VERSION ==="
+  
+  # เปลี่ยน version
+  sed -i "s/nextcloud:[0-9]*/nextcloud:$VERSION/" docker-compose.yml
+  
+  # pull และ update
+  docker compose pull app
+  docker compose stop app
+  docker compose up -d app
+  
+  # รอ container พร้อม
+  sleep 30
+  
+  # upgrade
+  docker exec -u www-data nextcloud_app php occ upgrade
+  docker exec -u www-data nextcloud_app php occ maintenance:mode --off
+  docker exec -u www-data nextcloud_app php occ cache:flush
+  
+  echo "=== Done Nextcloud $VERSION ==="
+  sleep 10
+done
+
+ตรวจสอบหลังเสร็จ
+bashdocker exec -u www-data nextcloud_app php occ status
+
+⚠️ ถ้า error ระหว่าง version ไหน หยุดและเอา error มาให้ดูก่อนครับ อย่า force ต่อ
+```
 ## ดู User
 
 ```bash
