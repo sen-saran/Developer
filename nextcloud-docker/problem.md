@@ -15,10 +15,9 @@ app:
     restart: always
 
     environment:
-
       - PHP_MEMORY_LIMIT=1024M
-
       - PHP_UPLOAD_LIMIT=10G
+      - PHP_MAX_UPLOAD=10G
 
 
 
