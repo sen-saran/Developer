@@ -96,7 +96,7 @@ services:
     volumes:
       - ./nginx/ssl.conf:/etc/nginx/conf.d/ssl.conf
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      - /data/nextcloud/files:/var/www/html:ro
+
     networks:
       - frontend
     security_opt:
